@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 聊天助手</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./css/styles.css">
+    <script src="./js/marked.min.js"></script>
+    <script src="./js/axios.min.js"></script>
+</head>
+<body>
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header" id="chatHeader">
+            <div class="header-left">
+                <i class="fas fa-robot"></i>
+                <h3 id="assistant">AI小助手</h3>
+            </div>
+            <button class="close-button" id="closeButton">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <div class="chat-wrapper">
+                <textarea id="messageInput" placeholder="请输入您的问题..."></textarea>
+                <div class="button-group">
+                    <button id="pauseButton" class="action-button" style="display: none;">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                    <button id="sendButton" class="action-button">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="footer" id="techBrand">品牌名字</div>
+        </div>
+    </div>
+    <script src="./js/script.js"></script>
+</body>
+</html> 

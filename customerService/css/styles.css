@@ -1,0 +1,443 @@
+:root {
+    /* 基础字体大小 */
+    font-size: 16px;
+    /* 颜色变量 */
+    --primary-color: #4CAF50;
+    --primary-hover: #45a049;
+    --background-color: #f5f5f5;
+    --text-color: #333;
+    --border-color: #ddd;
+    --user-message-bg: #e3f2fd;
+    --ai-message-bg: #f1f1f1;
+    --bg-color: #e2e1e1;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+.chat-button {
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+.chat-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+.chat-icon {
+    color: white;
+    font-size: 24px;
+}
+
+/* .chat-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+} */
+
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.chat-header {
+    padding: 12px 15px;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-left i {
+    font-size: 20px;
+}
+
+.header-left h3 {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    transition: transform 0.2s ease;
+}
+
+.close-button:hover {
+    transform: rotate(90deg);
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 20px 20px 100px 20px;
+    overflow-y: auto;
+    background-color: #fff;
+    scroll-behavior: smooth;
+    border-left: 1px solid #dddbdb;
+    border-right: 1px solid #dddbdb;
+}
+
+.message {
+    /* margin-bottom: 10px; */
+    padding: 10px 14px;
+    border-radius: 15px;
+    max-width: 85%;
+    line-height: 1.4;
+    position: relative;
+    animation: messageIn 0.3s ease-out;
+    word-wrap: break-word;
+    /* white-space: pre-wrap; */
+    font-size: 14px;
+}
+
+@keyframes messageIn {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.user-message {
+    background-color: var(--user-message-bg);
+    margin-left: auto;
+    margin-right: 0;
+    /* border-bottom-right-radius: 5px; */
+    width: fit-content;
+}
+
+.ai-message {
+    background-color: #fff;
+    margin-left: 0;
+    margin-right: auto;
+    width: fit-content;
+    border-radius: 4px;
+    box-shadow: 1px 1px 3px #ccc;
+}
+
+#messageInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    resize: none;
+    font-size: 14px;
+    padding: 12px;
+    height: 56px;
+    min-height: 56px;
+    max-height: 150px;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-right: 10px;
+}
+
+.action-button {
+    width: 45px;
+    height: 45px;
+    background-color: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.action-button:hover {
+    background-color: #f57c00;
+    transform: scale(1.05);
+}
+
+.action-button i {
+    font-size: 18px;
+}
+
+.action-button.paused {
+    background-color: #4CAF50;
+}
+
+.action-button.paused:hover {
+    background-color: #45a049;
+}
+
+/* 滚动条样式 */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0,0,0,0.3);
+}
+
+/* ai回答签名 */
+.message-signature {
+    font-size: 11px;
+    color: #999;
+    text-align: right;
+    margin-left: 5px;
+    animation: messageIn 0.3s ease-out;
+}
+
+/* 加载动画样式 */
+.loading-animation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--ai-message-bg);
+    border-radius: 15px;
+    margin-bottom: 15px;
+    width: fit-content;
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.loading-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    animation: loading 1.4s infinite ease-in-out;
+}
+
+.loading-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loading-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes loading {
+    0%, 80%, 100% { 
+        transform: scale(0);
+    }
+    40% { 
+        transform: scale(1);
+    }
+}
+
+/* Markdown内容样式 */
+.message-content {
+    line-height: 1.5;
+    font-size: 14px;
+    color: #fff;
+}
+
+.message-content.ai-content {
+    color: #000;
+}
+
+.message-content p {
+    margin: 0.3em 0;
+}
+
+.message-content pre {
+    background-color: #f6f8fa;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.3em 0;
+    font-size: 13px;
+}
+
+.message-content code {
+    background-color: #f6f8fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.message-content blockquote {
+    border-left: 4px solid #dfe2e5;
+    padding-left: 12px;
+    margin: 0.3em 0;
+    color: #6a737d;
+    font-size: 13px;
+}
+
+.message-content ul, .message-content ol {
+    padding-left: 24px;
+    margin: 0.3em 0;
+}
+
+.message-content h1, .message-content h2, .message-content h3 {
+    margin: 0.3em 0;
+    font-weight: 600;
+}
+
+.message-content h1 {
+    font-size: 20px;
+}
+
+.message-content h2 {
+    font-size: 18px;
+}
+
+.message-content h3 {
+    font-size: 16px;
+}
+
+.chat-window {
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-window.close {
+    display: none;
+}
+
+.chat-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.chat-header h2 {
+    font-size: 18px;
+}
+
+/* .message {
+    max-width: 85%;
+    margin: 8px 0;
+    padding: 8px 12px;
+} */
+
+.message-content {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.message-time {
+    font-size: 10px;
+}
+
+.action-button {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+}
+
+.loading-animation {
+    padding: 8px 12px;
+}
+
+.loading-dot {
+    width: 6px;
+    height: 6px;
+    margin: 0 3px;
+}
+
+/* 确保在移动端上输入框不会被键盘遮挡 */
+.chat-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-top: 1px solid #000;
+    border-left: 1px solid #dddbdb;
+    border-right: 1px solid #dddbdb;
+    border-bottom: 1px solid #dddbdb;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.chat-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.chat-input .footer {
+    border-top: 1px solid #a1a0a0;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #a1a0a0;
+}
+
+/* .chat-window {
+    height: 100vh;
+} */
+
+.wrapper {
+    margin-bottom: 10px;
+}
+
+/* 防止在iOS设备上点击输入框时页面缩放 */
+@supports (-webkit-touch-callout: none) {
+    .chat-input textarea {
+        font-size: 16px;
+    }
+} 
