@@ -203,7 +203,7 @@ auth.post('/login', validateFields(['user', 'password']), async (req, res) => {
         const { user, password, freeLogin } = req.body;
         const decryptUser = decryptData(user)
         const decryptPassword = decryptData(password)
-        const expiresIn = freeLogin ? '30d' : '1m'
+        const expiresIn = freeLogin ? '30d' : '1d'
 
         if (!decryptUser) {
             return res.json({ code: 4, msg: '账号解密失败' })
