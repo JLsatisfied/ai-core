@@ -45,7 +45,7 @@ const checkRateLimit = (req, res, next) => {
     const now = Date.now()
     const record = rateLimitMap.get(ip)
     if (record && now - record.start < 60 * 60 * 1000 && record.count >= 3) {
-        return res.status(429).json({ code: 4, msg: '操作过于频繁，请稍后再试' })
+        return res.json({ code: 4, msg: '操作过于频繁，请稍后再试' })
     }
     if (!record || now - record.start >= 60 * 60 * 1000) {
         rateLimitMap.set(ip, { start: now, count: 0 })
@@ -113,7 +113,7 @@ auth.post('/changePassword', async (req, res) => {
 
         const [results] = await query('select * from users where username = ?', [decryptUser])
         if (results.length === 0) {
-            return res.status(404).json({ code: 1, msg: '账号不存在' })
+            return res.json({ code: 1, msg: '账号不存在' })
         }
 
         const isMatch = bcrypt.compareSync(decryptPassword, results[0].password);
@@ -134,7 +134,7 @@ auth.post('/resetPassword', checkRateLimit, async (req, res) => {
         const { user, email } = req.body
         const [results] = await query('select * from users where username = ?', [user])
         if (results.length === 0) {
-            return res.status(404).json({ code: 1, msg: '账号不存在' })
+            return res.json({ code: 1, msg: '账号不存在' })
         }
         const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress
         rateLimitMap.get(ip).count++
@@ -152,26 +152,39 @@ auth.post('/register', async (req, res) => {
         const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
 
         if (/[\u4e00-\u9fa5]/.test(user) || /[\u4e00-\u9fa5]/.test(password)) {
-            return res.status(400).json({ code: 4, msg: '冒险者ID或通行密令不能使用中文' })
+            return res.json({ code: 4, msg: '冒险者ID或通行密令不能使用中文' })
+        }
+
+        // 密码强度校验：长度>=8 + 小写 + 大写 + 数字 + 特殊字符，至少满足3项
+        {
+            let strength = 0
+            if (password.length >= 8) strength++
+            if (/[a-z]/.test(password)) strength++
+            if (/[A-Z]/.test(password)) strength++
+            if (/[0-9]/.test(password)) strength++
+            if (/[^a-zA-Z0-9]/.test(password)) strength++
+            if (strength < 3) {
+                return res.json({ code: 4, msg: '通行密令强度不足，需至少包含大小写字母、数字或特殊字符中的两种，且长度不少于8位' })
+            }
         }
 
         const [ipResults] = await query('select * from users where ip = ?', [ip])
         if (ipResults.length > 0) {
-            return res.status(400).json({ code: 2, msg: '该ip地址已注册过一个账号' })
+            return res.json({ code: 2, msg: '该ip地址已注册过一个账号' })
         }
 
         const [userResults] = await query('select * from users where username = ?', [user])
         if (userResults.length > 0) {
-            return res.status(409).json({ code: 1, msg: '账号已存在' })
+            return res.json({ code: 1, msg: '账号已存在' })
         }
 
         const [emailResults] = await query('select * from users where email = ?', [email])
         if (emailResults.length > 0) {
-            return res.status(409).json({ code: 1, msg: '邮箱已存在' })
+            return res.json({ code: 1, msg: '邮箱已存在' })
         }
 
         if (req.session.captcha !== captcha.toLowerCase()) {
-            return res.status(400).json({ code: 3, msg: '验证码错误' })
+            return res.json({ code: 3, msg: '验证码错误' })
         }
 
         await query('insert into users (username, password, nickname, email, img_url, ip, appid) values (?, ?, ?, ?, ?, ?, ?)', [user, bcrypt.hashSync(password, salt), name, email, img_url, ip, generateAppId()])
@@ -190,10 +203,10 @@ auth.post('/login', validateFields(['user', 'password']), async (req, res) => {
         const { user, password, freeLogin } = req.body;
         const decryptUser = decryptData(user)
         const decryptPassword = decryptData(password)
-        const expiresIn = freeLogin ? '30d' : '1d'
+        const expiresIn = freeLogin ? '30d' : '1m'
 
         if (!decryptUser) {
-            return res.status(400).json({ code: 4, msg: '账号解密失败' })
+            return res.json({ code: 4, msg: '账号解密失败' })
         }
 
         const [results] = await query('select * from users where binary username = ? or email = ?', [decryptUser, decryptUser])
@@ -202,7 +215,7 @@ auth.post('/login', validateFields(['user', 'password']), async (req, res) => {
         }
 
         if (!decryptPassword) {
-            return res.status(400).json({ code: 4, msg: '密码解密失败' })
+            return res.json({ code: 4, msg: '密码解密失败' })
         }
 
         const isMatch = bcrypt.compareSync(decryptPassword, results[0].password);
