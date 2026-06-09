@@ -34,7 +34,10 @@ require('./config/passport.js')(passport);
 app.use('/aicg', require('./router/user'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ==================== 5. SPA history fallback + 静态文件 ====================
+// ==================== 5. 静态文件（在 history fallback 之前注册） ====================
+app.use('/docs', express.static(path.join(__dirname, 'star')));
+
+// SPA history fallback（仅对主应用生效）
 app.use(history());
 app.use('/', express.static(path.join(__dirname, 'dist')));
 app.use(express.static(path.join(__dirname, 'customerService')));
