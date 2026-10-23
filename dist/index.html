@@ -1,20 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/brave.jpeg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>未来智匠</title>
+    <script>
+      ;(function () {
+        try {
+          var key = 'wise-forge-theme'
+          var stored = localStorage.getItem(key)
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (stored === 'dark' || (!stored && prefersDark)) {
+            document.documentElement.classList.add('dark')
+            document.documentElement.style.colorScheme = 'dark'
+          }
+        } catch (e) {}
+      })()
+    </script>
     <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="module" crossorigin src="/js/index-BVIzJX2a.js"></script>
+    <script type="module" crossorigin src="/js/index-BMb7_P8C.js"></script>
     <link rel="modulepreload" crossorigin href="/js/vendor-vue-DkaNs6dJ.js">
     <link rel="modulepreload" crossorigin href="/js/vendor-common-CGLoiXvb.js">
-    <link rel="modulepreload" crossorigin href="/js/vendor-element-t7SZBptP.js">
+    <link rel="modulepreload" crossorigin href="/js/vendor-element-QFK36yQD.js">
     <link rel="stylesheet" crossorigin href="/css/vendor-common-BUMXTAWU.css">
-    <link rel="stylesheet" crossorigin href="/css/vendor-element-CGyegOLb.css">
-    <link rel="stylesheet" crossorigin href="/css/index-DfpOxvAs.css">
+    <link rel="stylesheet" crossorigin href="/css/vendor-element-oUCcTXT7.css">
+    <link rel="stylesheet" crossorigin href="/css/index-CaRAAvgL.css">
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app"></div>
   </body>
 </html>
