@@ -61,6 +61,35 @@ ai.post('/deepseekMoudle', (req, res) => {
     streamChatCompletion();
 })
 
+// DeepSeek 网页搜索（返回标题、链接、摘要，供模型参考）
+ai.post('/webSearch', [authenticateToken, validateFields(['query'])], async (req, res) => {
+    const { query, count, ori_question } = req.body
+    const searchQuery = String(query).trim().slice(0, 128)
+    if (!searchQuery) {
+        return res.json({ code: 1, msg: '搜索内容不能为空' })
+    }
+    try {
+        const { data } = await axios.post('https://api.deepseek.com/v1/tools/search', {
+            query: searchQuery,
+            count: Math.min(50, Math.max(1, Number(count) || 5)),
+            ori_question: ori_question ? String(ori_question).slice(0, 128) : undefined,
+            need_content: false
+        }, {
+            headers: {
+                Authorization: `Bearer ${process.env.DEEPSEEK_APIKEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 15000
+        })
+        const results = Array.isArray(data && data.results) ? data.results : []
+        return res.json({ code: 0, msg: '成功', data: results })
+    } catch (err) {
+        console.error('网页搜索失败:', err.response?.data || err.message)
+        const message = err.response?.status === 402 ? '搜索服务余额不足' : '网页搜索失败，请稍后再试'
+        return res.json({ code: 1, msg: message })
+    }
+})
+
 // 图片生成（讯飞星火）
 ai.post('/queryImg', [authenticateToken, validateFields(['prompt'])], (req, res) => {
     const { prompt } = req.body

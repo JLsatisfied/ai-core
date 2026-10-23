@@ -96,6 +96,84 @@ data.post('/addDialogue', authenticateToken, async (req, res) => {
     }
 })
 
+// 覆盖保存某个分类下的整段对话（编辑重发后同步当前活动分支）
+data.post('/replaceDialogue', [authenticateToken, validateFields(['category_id', 'user_id'])], async (req, res) => {
+    const { category_id, user_id, dialogue } = req.body
+    if (dialogue !== undefined && !Array.isArray(dialogue)) {
+        return res.json({ code: 1, msg: '对话内容格式错误' })
+    }
+    const rows = dialogue || []
+    let conn
+    try {
+        conn = await db.promise().getConnection()
+        await conn.beginTransaction()
+        await conn.query('delete from dialogue where category_id = ? and user_id = ?', [category_id, user_id])
+        if (rows.length > 0) {
+            const values = rows.map(item => [item.myself_reply, item.ai_reply, category_id, user_id])
+            await conn.query('insert into dialogue (myself_reply, ai_reply, category_id, user_id) values ?', [values])
+        }
+        await conn.commit()
+        return res.json({ code: 0, msg: '更新成功' })
+    } catch (err) {
+        if (conn) {
+            try {
+                await conn.rollback()
+            } catch {
+                // 回滚失败时保留原始错误信息
+            }
+        }
+        return dbError(res, err)
+    } finally {
+        if (conn) conn.release()
+    }
+})
+
+// 保存对话分支树（编辑重发、重新生成产生的所有版本）
+data.post('/saveDialogueTree', [authenticateToken, validateFields(['category_id', 'user_id'])], async (req, res) => {
+    const { category_id, user_id, tree } = req.body
+    if (!tree) {
+        return res.json({ code: 1, msg: '分支内容不能为空' })
+    }
+    let payload
+    try {
+        payload = typeof tree === 'string' ? tree : JSON.stringify(tree)
+    } catch {
+        return res.json({ code: 1, msg: '分支内容格式错误' })
+    }
+    try {
+        await query(
+            `insert into dialogue_tree (category_id, user_id, tree) values (?, ?, ?)
+             on duplicate key update tree = values(tree)`,
+            [category_id, user_id, payload]
+        )
+        return res.json({ code: 0, msg: '保存成功' })
+    } catch (err) {
+        return dbError(res, err)
+    }
+})
+
+// 查询对话分支树
+data.get('/queryDialogueTree', authenticateToken, async (req, res) => {
+    try {
+        const { category_id, user_id } = req.query
+        const [rows] = await query('select tree from dialogue_tree where category_id = ? and user_id = ?', [category_id, user_id])
+        if (!rows.length) {
+            return res.json({ code: 0, msg: '成功', data: null })
+        }
+        let tree = rows[0].tree
+        if (typeof tree === 'string') {
+            try {
+                tree = JSON.parse(tree)
+            } catch {
+                tree = null
+            }
+        }
+        return res.json({ code: 0, msg: '成功', data: tree })
+    } catch (err) {
+        return dbError(res, err)
+    }
+})
+
 // 查询用户下的大模型分类
 data.get('/queryCategory', authenticateToken, async (req, res) => {
     try {
@@ -131,6 +209,7 @@ data.post('/deleteCategory', [authenticateToken, validateFields(['category_id'])
     try {
         const { category_id } = req.body
         await query('delete from category where category_id = ?', [category_id])
+        await query('delete from dialogue_tree where category_id = ?', [category_id])
         return res.json({ code: 0, msg: "删除成功" })
     } catch (err) {
         return dbError(res, err)
@@ -145,6 +224,7 @@ data.post('/deleteDialogue', [authenticateToken, validateFields(['category_id', 
             return res.json({ code: 1, msg: "大模型类别id不能为空" })
         }
         await query('delete from dialogue where category_id = ? and user_id = ?', [category_id, user_id])
+        await query('delete from dialogue_tree where category_id = ? and user_id = ?', [category_id, user_id])
         return res.json({ code: 0, msg: "已清空历史记录" })
     } catch (err) {
         return dbError(res, err)

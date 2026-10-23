@@ -136,6 +136,10 @@ auth.post('/resetPassword', checkRateLimit, async (req, res) => {
         if (results.length === 0) {
             return res.json({ code: 1, msg: '账号不存在' })
         }
+        const targetEmail = results[0].email
+        if (!targetEmail || targetEmail !== email) {
+            return res.json({ code: 2, msg: '邮箱与账号不匹配' })
+        }
         const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress
         rateLimitMap.get(ip).count++
         const result = await sendMail(user, email)

@@ -16,7 +16,8 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+// 对话分支树快照可能较大，放宽 JSON 请求体限制
+app.use(express.json({ limit: '10mb' }));
 
 // ==================== 2. Session（供验证码使用） ====================
 app.use(session({
