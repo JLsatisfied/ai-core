@@ -22,7 +22,7 @@ const upload = multer({
     storage,
     fileFilter: (req, file, cb) => {
         if (!(file.mimetype == 'application/pdf')) {
-            cb(new Error('文件类型不正确'), false);
+            cb(new Error('仅支持上传 PDF 文件'), false);
         } else {
             cb(null, true);
         }
@@ -34,18 +34,25 @@ const upload = multer({
 
 // deepseek大模型 SSE 流式对话
 ai.post('/deepseekMoudle', (req, res) => {
-    const { text, moduleId } = req.body
+    const { text, moduleId, thinking } = req.body
     const openai = new OpenAI({
         baseURL: 'https://api.deepseek.com',
         apiKey: process.env.DEEPSEEK_APIKEY
     });
     async function streamChatCompletion() {
         try {
-            const gptStream = await openai.chat.completions.create({
+            const params = {
                 messages: text,
                 model: moduleId,
                 stream: true
-            });
+            };
+            // 思考模式由前端「贤者沉思」开关通过 thinking 显式控制：
+            // disabled 时模型不输出 reasoning_content，普通模式可以立即开始回答；
+            // 不传该参数时保持模型默认行为，兼容旧版客户端
+            if (typeof thinking === 'boolean') {
+                params.thinking = { type: thinking ? 'enabled' : 'disabled' };
+            }
+            const gptStream = await openai.chat.completions.create(params);
             res.writeHead(200, { 'Content-Type': 'text/event-stream' })
             for await (const chunk of gptStream) {
                 res.write(`data: ${JSON.stringify(chunk)}\n\n`)
@@ -53,7 +60,7 @@ ai.post('/deepseekMoudle', (req, res) => {
         } catch (error) {
             if (error.status == 402) {
                 res.writeHead(200, { 'Content-Type': 'text/event-stream' })
-                res.write(`data: ${JSON.stringify({message: "账户余额不足"})}\n\n`)
+                res.write(`data: ${JSON.stringify({message: "AI 服务余额不足，请联系管理员"})}\n\n`)
             }
         }
         res.end();
@@ -135,7 +142,7 @@ ai.post('/uploadFile', upload.single('avatar'), async (req, res) => {
     const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
     return res.json({
         code: 0,
-        msg: '文件上传成功',
+        msg: '上传成功',
         data: {
             originalName: req.file.filename,
             text: pdfData.text,
@@ -150,11 +157,11 @@ ai.post('/uploadFile', upload.single('avatar'), async (req, res) => {
 ai.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ code: 1, msg: '文件大小超过限制(最大1MB)', maxSize: '1MB' });
+      return res.status(413).json({ code: 1, msg: '文件大小不能超过 1MB', maxSize: '1MB' });
     }
-    return res.status(400).json({ code: 1, msg: '文件上传错误: ' + err.message });
+    return res.status(400).json({ code: 1, msg: '文件上传失败，请重试' });
   } else if (err) {
-    return res.status(500).json({ code: 1, msg: '服务器错误: ' + err.message });
+    return res.status(500).json({ code: 1, msg: '服务器错误，请稍后重试' });
   }
   next();
 });

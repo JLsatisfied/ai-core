@@ -35,7 +35,7 @@ const query = (sql, params) => db.promise().query(sql, params)
 
 const dbError = (res, err) => {
     console.error('数据库错误:', err)
-    return res.status(500).json({ code: 4, msg: '服务器内部错误' })
+    return res.status(500).json({ code: 4, msg: '服务暂时不可用，请稍后重试' })
 }
 
 // 密码重置频率限制：同一IP 60分钟内最多3次
@@ -45,7 +45,7 @@ const checkRateLimit = (req, res, next) => {
     const now = Date.now()
     const record = rateLimitMap.get(ip)
     if (record && now - record.start < 60 * 60 * 1000 && record.count >= 3) {
-        return res.json({ code: 4, msg: '操作过于频繁，请稍后再试' })
+        return res.json({ code: 4, msg: '操作过于频繁，请 1 小时后再试' })
     }
     if (!record || now - record.start >= 60 * 60 * 1000) {
         rateLimitMap.set(ip, { start: now, count: 0 })
@@ -61,31 +61,31 @@ const sendMail = async (user, email) => {
     const numbers = generatePassword()
     try {
         const { error } = await resend.emails.send({
-            from: '冒险纪元 <noreply@resend.dev>',
+            from: '未来智匠 <noreply@resend.dev>',
             to: email,
-            subject: '冒险者请查看您的通行密令',
-            html: `<div style="background:#0a0a12;padding:40px 0;font-family:Arial,sans-serif">
-  <table width="480" align="center" style="background:rgba(16,28,46,0.9);border:2px solid #31415b;border-collapse:collapse">
+            subject: '【未来智匠】密码重置',
+            html: `<div style="background:#f5f6f8;padding:40px 0;font-family:-apple-system,'Segoe UI',Arial,sans-serif">
+  <table width="480" align="center" style="background:#ffffff;border:1px solid #e4e7ec;border-radius:12px;border-collapse:separate">
     <tr>
       <td style="padding:32px 36px 0;text-align:center">
-        <div style="font-size:20px;color:#f7ead0;letter-spacing:4px">⚔️ 冒险纪元 ⚔️</div>
-        <div style="height:2px;background:linear-gradient(90deg,transparent,#7dd8c7,#d8a657,#7dd8c7,transparent);margin:18px 0"></div>
+        <div style="font-size:20px;color:#111827;font-weight:600">未来智匠 Wise Forge</div>
+        <div style="height:1px;background:#e4e7ec;margin:18px 0"></div>
       </td>
     </tr>
     <tr>
       <td style="padding:24px 36px">
-        <p style="color:#b6a989;font-size:14px;margin:0 0 20px;text-align:center">冒险者，你申请了重置通行密令。</p>
-        <p style="color:#b6a989;font-size:14px;margin:0 0 24px;text-align:center">请使用以下密令重新进入这片神奇大陆：</p>
-        <div style="background:rgba(0,0,0,0.4);border:2px solid #7dd8c7;padding:22px 0;text-align:center">
-          <span style="font-family:'Courier New',monospace;font-size:28px;color:#c9fff2;letter-spacing:6px;text-shadow:0 0 10px #7dd8c7">${numbers}</span>
+        <p style="color:#374151;font-size:14px;margin:0 0 20px;text-align:center">你申请了重置密码。</p>
+        <p style="color:#374151;font-size:14px;margin:0 0 24px;text-align:center">请使用下面的临时密码登录：</p>
+        <div style="background:#f9fafb;border:1px solid #2563eb;border-radius:8px;padding:22px 0;text-align:center">
+          <span style="font-family:'Courier New',monospace;font-size:28px;color:#1d4ed8;letter-spacing:6px">${numbers}</span>
         </div>
-        <p style="color:#6b6178;font-size:12px;margin:16px 0 0;text-align:center">进入世界后请尽快修改密令</p>
+        <p style="color:#6b7280;font-size:12px;margin:16px 0 0;text-align:center">登录后请尽快修改密码。如果不是你本人操作，请忽略这封邮件。</p>
       </td>
     </tr>
     <tr>
       <td style="padding:20px 36px 28px;text-align:center">
-        <div style="height:1px;background:rgba(125,216,199,0.15);margin-bottom:16px"></div>
-        <span style="color:#4a5568;font-size:11px">— 未来智匠 · 冒险纪元 —</span>
+        <div style="height:1px;background:#e4e7ec;margin-bottom:16px"></div>
+        <span style="color:#9ca3af;font-size:11px">— 未来智匠 Wise Forge —</span>
       </td>
     </tr>
   </table>
@@ -93,13 +93,13 @@ const sendMail = async (user, email) => {
         })
         if (error) {
             console.error('邮件发送失败:', error)
-            return { code: 4, msg: '邮件发送失败', status: 500 }
+            return { code: 4, msg: '邮件发送失败，请稍后重试', status: 500 }
         }
         await query('update users set password = ? where username = ?', [bcrypt.hashSync(numbers, salt), user])
         return { code: 0, msg: '密码重置成功，请前往邮箱查看', status: 200 }
     } catch (err) {
         console.error('邮件发送失败:', err)
-        return { code: 4, msg: '邮件发送失败', status: 500 }
+        return { code: 4, msg: '邮件发送失败，请稍后重试', status: 500 }
     }
 }
 
@@ -118,11 +118,11 @@ auth.post('/changePassword', async (req, res) => {
 
         const isMatch = bcrypt.compareSync(decryptPassword, results[0].password);
         if (!isMatch) {
-            return res.json({ code: 2, msg: '密令错误' })
+            return res.json({ code: 2, msg: '当前密码不正确' })
         }
 
         await query('update users set password = ? where username = ?', [bcrypt.hashSync(decryptNewPassword, salt), decryptUser])
-        return res.json({ code: 0, msg: '密令修改成功' })
+        return res.json({ code: 0, msg: '密码修改成功' })
     } catch (err) {
         return dbError(res, err)
     }
@@ -156,7 +156,7 @@ auth.post('/register', async (req, res) => {
         const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
 
         if (/[\u4e00-\u9fa5]/.test(user) || /[\u4e00-\u9fa5]/.test(password)) {
-            return res.json({ code: 4, msg: '冒险者ID或通行密令不能使用中文' })
+            return res.json({ code: 4, msg: '账号和密码不能使用中文' })
         }
 
         // 密码强度校验：长度>=8 + 小写 + 大写 + 数字 + 特殊字符，至少满足3项
@@ -168,27 +168,27 @@ auth.post('/register', async (req, res) => {
             if (/[0-9]/.test(password)) strength++
             if (/[^a-zA-Z0-9]/.test(password)) strength++
             if (strength < 3) {
-                return res.json({ code: 4, msg: '通行密令强度不足，需至少包含大小写字母、数字或特殊字符中的两种，且长度不少于8位' })
+                return res.json({ code: 4, msg: '密码强度不足：长度不少于 8 位，且需包含大小写字母、数字或特殊字符中的至少两种' })
             }
         }
 
         const [ipResults] = await query('select * from users where ip = ?', [ip])
         if (ipResults.length > 0) {
-            return res.json({ code: 2, msg: '该ip地址已注册过一个账号' })
+            return res.json({ code: 2, msg: '当前网络已注册过账号，同一网络仅可注册一个账号' })
         }
 
         const [userResults] = await query('select * from users where username = ?', [user])
         if (userResults.length > 0) {
-            return res.json({ code: 1, msg: '账号已存在' })
+            return res.json({ code: 1, msg: '该账号已被注册' })
         }
 
         const [emailResults] = await query('select * from users where email = ?', [email])
         if (emailResults.length > 0) {
-            return res.json({ code: 1, msg: '邮箱已存在' })
+            return res.json({ code: 1, msg: '该邮箱已被注册' })
         }
 
         if (req.session.captcha !== captcha.toLowerCase()) {
-            return res.json({ code: 3, msg: '验证码错误' })
+            return res.json({ code: 3, msg: '验证码不正确' })
         }
 
         await query('insert into users (username, password, nickname, email, img_url, ip, appid) values (?, ?, ?, ?, ?, ?, ?)', [user, bcrypt.hashSync(password, salt), name, email, img_url, ip, generateAppId()])
@@ -210,28 +210,28 @@ auth.post('/login', validateFields(['user', 'password']), async (req, res) => {
         const expiresIn = freeLogin ? '30d' : '1d'
 
         if (!decryptUser) {
-            return res.json({ code: 4, msg: '账号解密失败' })
+            return res.json({ code: 4, msg: '账号信息有误，请重新输入' })
         }
 
         const [results] = await query('select * from users where binary username = ? or email = ?', [decryptUser, decryptUser])
         if (results.length === 0) {
-            return res.json({ code: 1, msg: '账号或者邮箱不存在' })
+            return res.json({ code: 1, msg: '账号或邮箱不存在' })
         }
 
         if (!decryptPassword) {
-            return res.json({ code: 4, msg: '密码解密失败' })
+            return res.json({ code: 4, msg: '密码信息有误，请重新输入' })
         }
 
         const isMatch = bcrypt.compareSync(decryptPassword, results[0].password);
         if (!isMatch) {
-            return res.json({ code: 2, msg: '密码错误' })
+            return res.json({ code: 2, msg: '密码不正确' })
         }
 
         const rules = { id: results[0].id, name: results[0].username, jti: crypto.randomUUID() }
         jwt.sign(rules, keys, { expiresIn }, (tokenErr, token) => {
             if (tokenErr) {
                 console.error('token生成失败:', tokenErr)
-                return res.status(500).json({ code: 5, msg: '服务器内部错误' })
+                return res.status(500).json({ code: 5, msg: '服务暂时不可用，请稍后重试' })
             }
             res.json({ code: 0, msg: '登录成功', token })
         })
@@ -254,7 +254,7 @@ auth.post('/logout', (req, res) => {
 auth.get('/getUser', authenticateToken, async (req, res) => {
     try {
         if (!req.user) {
-            return res.status(401).json({ code: 4, msg: '非法Token' })
+            return res.status(401).json({ code: 4, msg: '登录状态已失效，请重新登录' })
         }
         const [results] = await query('select * from users where username = ? AND id = ?', [req.user.name, req.user.id])
         res.json({
