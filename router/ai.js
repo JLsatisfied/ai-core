@@ -33,7 +33,8 @@ const upload = multer({
 });
 
 // deepseek大模型 SSE 流式对话
-ai.post('/deepseekMoudle', (req, res) => {
+// 必须登录后调用：该接口使用服务端 API Key，未鉴权时任何人都可无限消耗额度
+ai.post('/deepseekMoudle', authenticateToken, (req, res) => {
     const { text, moduleId, thinking } = req.body
     const openai = new OpenAI({
         baseURL: 'https://api.deepseek.com',
@@ -135,22 +136,31 @@ ai.post('/queryImg', [authenticateToken, validateFields(['prompt'])], (req, res)
         });
 })
 
-// 上传PDF文件
-ai.post('/uploadFile', upload.single('avatar'), async (req, res) => {
-    const dataBuffer = fs.readFileSync(req.file.path);
-    const pdfData = await pdf(dataBuffer);
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    return res.json({
-        code: 0,
-        msg: '上传成功',
-        data: {
-            originalName: req.file.filename,
-            text: pdfData.text,
-            metadata: pdfData.metadata,
-            numPages: pdfData.numpages,
-            url: imageUrl
-        }
-    });
+// 上传PDF文件（需登录，避免匿名请求占用磁盘和服务端解析资源）
+ai.post('/uploadFile', authenticateToken, upload.single('avatar'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ code: 1, msg: '请选择要上传的 PDF 文件' })
+    }
+    try {
+        const dataBuffer = fs.readFileSync(req.file.path);
+        const pdfData = await pdf(dataBuffer);
+        const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        return res.json({
+            code: 0,
+            msg: '上传成功',
+            data: {
+                originalName: req.file.filename,
+                text: pdfData.text,
+                metadata: pdfData.metadata,
+                numPages: pdfData.numpages,
+                url: imageUrl
+            }
+        });
+    } catch (err) {
+        // 解析失败时删除已落盘的文件，避免留下无效文件；同时防止异常变成未捕获的 Promise 拒绝
+        fs.unlink(req.file.path, () => {});
+        return res.status(500).json({ code: 1, msg: '文件解析失败，请确认是有效的 PDF 后重试' })
+    }
 });
 
 // multer 错误处理
