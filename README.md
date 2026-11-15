@@ -17,7 +17,7 @@ ai-core/
 ├── router/
 │   ├── user.js             # 路由入口，聚合所有子路由
 │   ├── auth.js             # 认证模块（注册/登录/密码重置/验证码）
-│   ├── ai.js               # AI 模块（DeepSeek流式对话/讯飞星火图片生成/PDF上传）
+│   ├── ai.js               # AI 模块（DeepSeek流式对话含日期/天气工具调用/语音合成朗读/讯飞星火图片生成/PDF上传）
 │   └── data.js             # 数据模块（分类/对话/模板 CRUD）
 ├── middleware/
 │   ├── auth.js             # JWT 认证中间件 + token 黑名单校验
@@ -37,7 +37,7 @@ ai-core/
 | 路由文件 | 前缀 | 功能 |
 |---------|------|------|
 | `auth.js` | `/aicg` | 注册、登录、退出、密码修改/重置、验证码、用户信息 |
-| `ai.js` | `/aicg` | DeepSeek 流式对话、讯飞星火图片生成、PDF 上传解析 |
+| `ai.js` | `/aicg` | DeepSeek 流式对话（支持日期/天气工具调用）、语音合成（朗读）、讯飞星火图片生成、PDF 上传解析 |
 | `data.js` | `/aicg` | 大模型分类 CRUD、对话记录 CRUD、客服配置、模板查询 |
 
 ### 核心依赖
