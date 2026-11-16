@@ -109,10 +109,34 @@ const streamChatRound = async (openai, params, res, controller) => {
     }
 }
 
+// 会话标题：上游的 title 参数与客户端工具在关闭思考时不能同时出现，
+// 因此单独发一条低成本请求（max_tokens=1）生成标题，不影响主回答流
+const requestSessionTitle = async (openai, messages, model, signal) => {
+    if (!Array.isArray(messages)) return ''
+    const firstUser = messages.find(
+        item => item && item.role === 'user' && typeof item.content === 'string'
+    )
+    const content = firstUser ? firstUser.content.trim().slice(0, 4000) : ''
+    if (!content) return ''
+
+    const result = await openai.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content }],
+        stream: false,
+        max_tokens: 1,
+        thinking: { type: 'disabled' },
+        title: { enabled: true }
+    }, { signal, timeout: 5000 })
+
+    const message = result.choices && result.choices[0] && result.choices[0].message
+    const sessionTitle = message && message.title
+    return typeof sessionTitle === 'string' ? sessionTitle.trim() : ''
+}
+
 // deepseek大模型 SSE 流式对话
 // 必须登录后调用：该接口使用服务端 API Key，未鉴权时任何人都可无限消耗额度
 ai.post('/deepseekMoudle', authenticateToken, async (req, res) => {
-    const { text, moduleId, thinking } = req.body || {}
+    const { text, moduleId, thinking, title } = req.body || {}
     if (!Array.isArray(text) || text.length === 0 || !moduleId) {
         return res.status(400).json({ code: 1, msg: '对话参数不完整' })
     }
@@ -130,6 +154,19 @@ ai.post('/deepseekMoudle', authenticateToken, async (req, res) => {
     res.on('close', () => {
         if (!res.writableEnded) controller.abort()
     })
+
+    // 仅首次对话生成标题；失败或超时都静默跳过，前端沿用原逻辑。
+    // 标题生成与正文并行，完成后立即推送，避免拖慢正常回复的结束
+    const titleTask = title === true
+        ? requestSessionTitle(openai, text, moduleId, controller.signal)
+            .then(sessionTitle => {
+                if (sessionTitle && !res.writableEnded && !res.destroyed) {
+                    res.write(`data: ${JSON.stringify({ title: sessionTitle })}\n\n`)
+                }
+                return sessionTitle
+            })
+            .catch(() => '')
+        : null
 
     try {
         // 工具调用闭环：模型可能先调用工具，拿到结果后再继续生成，最多循环 MAX_TOOL_ROUNDS 轮
@@ -178,6 +215,15 @@ ai.post('/deepseekMoudle', authenticateToken, async (req, res) => {
                     content: JSON.stringify(result)
                 })
             }
+        }
+
+        // 短回答可能在标题生成完成前就结束，最多再等 1.5 秒兜底；
+        // 正常长度的回答里标题早已推送，不会增加等待
+        if (titleTask) {
+            await Promise.race([
+                titleTask,
+                new Promise(resolve => setTimeout(resolve, 1500))
+            ])
         }
     } catch (error) {
         // 客户端主动中止（点停止/关闭页面）不算异常
